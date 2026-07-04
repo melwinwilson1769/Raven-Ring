@@ -1,0 +1,345 @@
+/* ============================================================
+   RAVEN & RING — supplementary theme + animation layer
+   Load this AFTER the base <style> block / before script.js runs.
+   ============================================================ */
+
+/* ---------- CRT power-on boot flash ---------- */
+#crtBoot{
+  position:fixed; inset:0; z-index:999;
+  background:#eaf6ff;
+  transform:scaleY(.004);
+  opacity:1;
+  pointer-events:none;
+  animation:crtPowerOn .85s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes crtPowerOn{
+  0%   { transform:scaleY(.004); opacity:1; }
+  35%  { transform:scaleY(.02);  opacity:1; }
+  55%  { transform:scaleY(1);    opacity:1; }
+  75%  { transform:scaleY(1);    opacity:.55; }
+  100% { transform:scaleY(1);    opacity:0; visibility:hidden; }
+}
+
+/* ---------- Header sigil: slow idle rotation + glow on hover ---------- */
+.brand .sigil{
+  transition:transform .3s ease, filter .3s ease;
+  filter:drop-shadow(0 0 0 rgba(205,165,75,0));
+}
+.brand:hover .sigil{
+  transform:rotate(-8deg) scale(1.15);
+  filter:drop-shadow(0 0 6px rgba(205,165,75,.9));
+}
+
+/* ---------- Nav sliding glow indicator ---------- */
+#mainNav{ position:relative; }
+.nav-indicator{
+  position:absolute;
+  bottom:-6px; left:0;
+  height:3px; width:0;
+  background:linear-gradient(90deg, transparent, var(--ember), transparent);
+  box-shadow:0 0 8px 1px var(--ember);
+  transition:left .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1);
+  pointer-events:none;
+}
+
+/* subtle shimmer sweep across every pixel button */
+.nav-btn, .file-btn, .action-btn, .ghost-btn, .mode-toggle button{
+  position:relative;
+  overflow:hidden;
+}
+.nav-btn::after, .file-btn::after, .action-btn::after, .ghost-btn::after, .mode-toggle button::after{
+  content:'';
+  position:absolute; top:0; left:-60%;
+  width:40%; height:100%;
+  background:linear-gradient(120deg, transparent, rgba(255,255,255,.35), transparent);
+  transform:skewX(-20deg);
+  transition:left .5s ease;
+  pointer-events:none;
+}
+.nav-btn:hover::after, .file-btn:hover::after, .action-btn:hover::after,
+.ghost-btn:hover::after, .mode-toggle button:hover::after{
+  left:130%;
+}
+
+/* ---------- Title: torch-glow pulse + occasional glitch ---------- */
+h1.title{
+  animation:titleGlow 3.2s ease-in-out infinite;
+}
+@keyframes titleGlow{
+  0%,100%{ text-shadow:3px 3px 0 var(--ember-dim), 6px 6px 0 rgba(0,0,0,.35), 0 0 6px rgba(255,123,61,.15); }
+  50%{ text-shadow:3px 3px 0 var(--ember-dim), 6px 6px 0 rgba(0,0,0,.35), 0 0 22px rgba(255,123,61,.65); }
+}
+h1.title.glitch{
+  animation:titleGlow 3.2s ease-in-out infinite, glitchJump .18s steps(2,end) 2;
+}
+@keyframes glitchJump{
+  0%{ clip-path:inset(0 0 0 0); transform:translate(0,0); }
+  20%{ clip-path:inset(10% 0 60% 0); transform:translate(-3px,0); text-shadow:-2px 0 var(--ice), 2px 0 var(--blood); }
+  40%{ clip-path:inset(60% 0 5% 0); transform:translate(3px,0); }
+  60%{ clip-path:inset(30% 0 40% 0); transform:translate(-2px,0); }
+  80%{ clip-path:inset(5% 0 70% 0); transform:translate(2px,0); }
+  100%{ clip-path:inset(0 0 0 0); transform:translate(0,0); }
+}
+
+/* ---------- Panels: rise into view ---------- */
+.panel{
+  animation:panelRise .55s cubic-bezier(.2,.7,.3,1) both;
+}
+@keyframes panelRise{
+  from{ opacity:0; transform:translateY(28px) scale(.985); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* ---------- Scroll box: unroll-in effect when content updates ---------- */
+.scroll-box{ transform-origin:top center; }
+.scroll-box.unrolling{
+  animation:unroll .5s cubic-bezier(.2,.7,.3,1);
+}
+@keyframes unroll{
+  0%{ transform:scaleY(.05); opacity:0; }
+  60%{ transform:scaleY(1.04); opacity:1; }
+  100%{ transform:scaleY(1); opacity:1; }
+}
+
+/* ---------- Wax seal: idle invitation pulse (stops once broken) ---------- */
+.seal-btn:not(.broken){
+  animation:sealPulse 2.4s ease-in-out infinite;
+}
+@keyframes sealPulse{
+  0%,100%{ box-shadow:0 6px 0 #4a1414, 0 10px 14px rgba(0,0,0,.5), 0 0 0 rgba(182,64,63,0); }
+  50%{ box-shadow:0 6px 0 #4a1414, 0 10px 20px rgba(0,0,0,.55), 0 0 22px 4px rgba(182,64,63,.55); }
+}
+
+/* wax shard burst on click, spawned by script.js */
+.wax-shard{
+  position:fixed; z-index:40; pointer-events:none;
+  width:8px; height:8px; background:var(--blood);
+  animation:shardFly .6s ease-out forwards;
+}
+@keyframes shardFly{
+  to{ transform:translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity:0; }
+}
+
+/* ---------- Rising ember particles (background ambience) ---------- */
+.ember-field{
+  position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden;
+}
+.ember-particle{
+  position:absolute;
+  bottom:-10px;
+  width:3px; height:3px;
+  border-radius:50%;
+  background:radial-gradient(circle, #ffd9a0, var(--ember) 60%, transparent 100%);
+  opacity:0;
+  animation-name:emberRise;
+  animation-timing-function:ease-in;
+  animation-fill-mode:forwards;
+}
+@keyframes emberRise{
+  0%{ transform:translate(0,0) scale(1); opacity:0; }
+  10%{ opacity:.9; }
+  100%{ transform:translate(var(--drift), -110vh) scale(.3); opacity:0; }
+}
+
+/* ---------- Raven flyover ---------- */
+.raven-fly{
+  position:fixed; top:var(--fly-top, 12%); left:-60px; z-index:3;
+  width:34px; height:auto; pointer-events:none;
+  animation:ravenFly linear forwards;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));
+}
+.raven-fly svg{ animation:ravenFlap .35s steps(2) infinite; }
+@keyframes ravenFly{
+  from{ transform:translateX(0); }
+  to{ transform:translateX(calc(100vw + 120px)); }
+}
+@keyframes ravenFlap{
+  0%,100%{ transform:scaleY(1); }
+  50%{ transform:scaleY(.72); }
+}
+
+/* ---------- Bat horde intro burst ---------- */
+.bat-field{
+  position:fixed; inset:0; z-index:120; pointer-events:none; overflow:hidden;
+}
+.bat{
+  position:absolute; top:50%; left:50%; width:28px; height:auto;
+  transform:translate(-50%,-50%);
+  animation-name:batBurst;
+  animation-timing-function:cubic-bezier(.2,.6,.35,1);
+  animation-fill-mode:forwards;
+  will-change:transform, opacity;
+}
+.bat svg{ display:block; animation:batFlap .12s steps(2) infinite; }
+@keyframes batBurst{
+  0%{ transform:translate(-50%,-50%) scale(.3) rotate(0deg); opacity:0; }
+  8%{ opacity:1; }
+  82%{ opacity:1; }
+  100%{
+    transform:translate(calc(-50% + var(--bx)), calc(-50% + var(--by))) scale(1) rotate(var(--brot));
+    opacity:0;
+  }
+}
+@keyframes batFlap{
+  0%,100%{ transform:scaleY(1); }
+  50%{ transform:scaleY(.45); }
+}
+
+/* ---------- Modal overlay / dialog ---------- */
+.modal-overlay{
+  position:fixed; inset:0; z-index:150;
+  background:rgba(6,8,14,.78);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px;
+  opacity:0; pointer-events:none;
+  transition:opacity .25s ease;
+}
+.modal-overlay.show{ opacity:1; pointer-events:auto; }
+.modal-box{
+  position:relative;
+  max-width:440px; width:100%;
+  background:var(--ink-2);
+  border:3px solid var(--gold);
+  box-shadow:0 0 0 3px var(--ink), 0 0 0 6px var(--gold), 10px 10px 0 rgba(0,0,0,.45);
+  padding:28px 24px 24px;
+  transform:translateY(18px) scale(.97);
+  transition:transform .28s cubic-bezier(.2,.8,.3,1);
+}
+.modal-overlay.show .modal-box{ transform:translateY(0) scale(1); }
+.modal-title{
+  font-family:'IM Fell English SC', serif;
+  font-size:26px; color:var(--gold); margin:0 0 12px;
+  border-bottom:2px dashed var(--parchment-line); padding-bottom:10px;
+}
+.modal-text{
+  font-family:'VT323', monospace; font-size:19px; line-height:1.5; color:var(--parchment-dark);
+  margin:0 0 16px;
+}
+.modal-checkbox{
+  display:flex; align-items:center; gap:8px;
+  font-family:'VT323', monospace; font-size:17px; color:var(--ice);
+  margin-bottom:18px; cursor:pointer;
+}
+.modal-checkbox input{ width:16px; height:16px; accent-color:var(--ember); cursor:pointer; }
+.modal-actions{ display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+.modal-x{
+  position:absolute; top:8px; right:8px;
+  width:28px; height:28px;
+  background:var(--ink-3); color:var(--parchment);
+  border:2px solid var(--wolf); cursor:pointer;
+  font-family:'Press Start 2P', monospace; font-size:10px;
+  display:flex; align-items:center; justify-content:center;
+}
+.modal-x:hover{ background:var(--blood); border-color:var(--blood); color:#fff; }
+
+/* ---------- Review widget (top-left) ---------- */
+.review-widget{
+  position:fixed; top:96px; left:16px; z-index:70;
+  font-family:'VT323', monospace;
+}
+.review-toggle{
+  font-family:'Press Start 2P', monospace; font-size:10px;
+  background:var(--ink-2); color:var(--gold);
+  border:3px solid var(--gold);
+  padding:10px 12px; cursor:pointer;
+  box-shadow:3px 3px 0 var(--ink);
+}
+.review-toggle:hover{ background:var(--gold); color:var(--ink); }
+.review-panel{
+  margin-top:8px;
+  width:240px;
+  background:var(--ink-2);
+  border:3px solid var(--gold);
+  box-shadow:0 0 0 3px var(--ink), 5px 5px 0 rgba(0,0,0,.4);
+  padding:16px;
+  display:none;
+  flex-direction:column;
+  gap:10px;
+}
+.review-widget.open .review-panel{ display:flex; animation:panelRise .3s ease; }
+.review-panel textarea{ min-height:70px; font-size:17px; }
+.star-rating{ display:flex; gap:4px; }
+.star{
+  background:none; border:none; cursor:pointer;
+  font-size:26px; line-height:1; color:var(--wolf);
+  padding:0; transition:color .15s ease, transform .15s ease;
+}
+.star:hover{ transform:scale(1.15); }
+.star.active{ color:var(--gold); text-shadow:0 0 6px rgba(205,165,75,.8); }
+
+@media (max-width:640px){
+  .review-widget{ top:auto; bottom:16px; left:16px; }
+}
+
+/* ---------- Toast notifications ---------- */
+.toast-container{
+  position:fixed; right:18px; bottom:18px; z-index:80;
+  display:flex; flex-direction:column; gap:10px;
+  pointer-events:none;
+}
+.toast{
+  font-family:'VT323', monospace; font-size:18px;
+  background:var(--ink-2); color:var(--parchment);
+  border:3px solid var(--gold);
+  box-shadow:4px 4px 0 var(--ink), 0 0 14px rgba(205,165,75,.35);
+  padding:10px 16px;
+  min-width:220px;
+  transform:translateX(120%);
+  opacity:0;
+  transition:transform .35s cubic-bezier(.2,.8,.3,1), opacity .35s ease;
+}
+.toast.show{ transform:translateX(0); opacity:1; }
+.toast .toast-title{
+  font-family:'Press Start 2P', monospace; font-size:9px; color:var(--ember);
+  display:block; margin-bottom:4px; letter-spacing:1px;
+}
+
+/* ---------- Output flash when a spell is cast ---------- */
+textarea.flash-glow{
+  animation:flashGlow .7s ease;
+}
+@keyframes flashGlow{
+  0%{ box-shadow:0 0 0 4px var(--ember), 0 0 20px rgba(255,123,61,.6); }
+  100%{ box-shadow:none; }
+}
+
+/* ---------- Textareas: focus glow ---------- */
+textarea{
+  transition:box-shadow .25s ease, transform .15s ease;
+}
+textarea:focus{
+  box-shadow:0 0 0 3px var(--ice), 0 0 16px rgba(127,216,230,.5);
+}
+
+/* ---------- Ledger rows: staggered fade-in ---------- */
+table.ledger tbody tr{
+  opacity:0;
+  animation:rowFade .35s ease forwards;
+}
+@keyframes rowFade{
+  from{ opacity:0; transform:translateX(-6px); }
+  to{ opacity:1; transform:translateX(0); }
+}
+
+/* ---------- Parallax stars (JS updates transform via CSS var) ---------- */
+.stars{
+  transition:transform .15s linear;
+  transform:translate(var(--parx, 0px), var(--pary, 0px));
+}
+
+/* ---------- Page switch transition ---------- */
+.page{
+  transition:opacity .25s ease;
+}
+.page.leaving{
+  opacity:0;
+}
+
+/* ---------- Reduced motion respect ---------- */
+@media (prefers-reduced-motion: reduce){
+  #crtBoot, h1.title, .seal-btn:not(.broken), .panel, .ember-particle,
+  .raven-fly, .raven-fly svg, .bat, .bat svg, table.ledger tbody tr{
+    animation:none !important;
+  }
+  .toast{ transition:none; }
+}

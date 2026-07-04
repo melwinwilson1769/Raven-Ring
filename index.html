@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raven &amp; Ring — Scroll Cipher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  :root{
+    --ink:#0a0e18;
+    --ink-2:#121a2c;
+    --ink-3:#1b2540;
+    --parchment:#ecd9ab;
+    --parchment-dark:#d8c088;
+    --parchment-line:#b8975a;
+    --ember:#ff7b3d;
+    --ember-dim:#a34a1f;
+    --ice:#7fd8e6;
+    --wolf:#7b839c;
+    --blood:#b6403f;
+    --gold:#cda54c;
+    --pixel:4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--parchment);
+    font-family:'IM Fell English', serif;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--ember); color:var(--ink);}
+
+  /* starfield */
+  .stars{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, #fff9 0, transparent 60%),
+      radial-gradient(2px 2px at 70% 15%, #fff7 0, transparent 60%),
+      radial-gradient(1px 1px at 40% 70%, #fff6 0, transparent 60%),
+      radial-gradient(2px 2px at 85% 60%, #fff8 0, transparent 60%),
+      radial-gradient(1px 1px at 55% 45%, #fff5 0, transparent 60%),
+      radial-gradient(1px 1px at 10% 80%, #fff6 0, transparent 60%),
+      radial-gradient(2px 2px at 92% 85%, #fff7 0, transparent 60%);
+    opacity:.7;
+  }
+
+  /* CRT scanline overlay */
+  .crt{
+    position:fixed; inset:0; z-index:60; pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,.18) 3px,
+      rgba(0,0,0,.18) 4px
+    );
+    mix-blend-mode:multiply;
+  }
+  .vignette{
+    position:fixed; inset:0; z-index:59; pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+
+  .pixel-font{ font-family:'Press Start 2P', monospace; }
+  .term-font{ font-family:'VT323', monospace; }
+  .scroll-font{ font-family:'IM Fell English SC', serif; }
+
+  a{color:inherit;}
+
+  /* ===== Header / Nav ===== */
+  header{
+    position:relative; z-index:5;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:12px;
+    padding:18px 28px;
+    background:linear-gradient(180deg, var(--ink-2), var(--ink));
+    border-bottom:var(--pixel) solid var(--gold);
+    box-shadow:0 4px 0 var(--ink-3);
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+    font-family:'Press Start 2P', monospace;
+    font-size:14px;
+    letter-spacing:1px;
+    color:var(--parchment);
+    text-shadow:2px 2px 0 var(--ember-dim);
+  }
+  .brand .sigil{ width:28px; height:28px; image-rendering:pixelated; }
+  nav{ display:flex; gap:10px; flex-wrap:wrap; }
+  .nav-btn{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    color:var(--parchment);
+    background:var(--ink-3);
+    border:3px solid var(--wolf);
+    padding:10px 14px;
+    cursor:pointer;
+    text-decoration:none;
+    box-shadow:3px 3px 0 var(--ink);
+    transition:transform .08s ease;
+  }
+  .nav-btn:hover{ color:var(--ink); background:var(--ice); border-color:var(--ice); }
+  .nav-btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
+  .nav-btn.active{ background:var(--ember); border-color:var(--ember); color:var(--ink); }
+
+  main{ position:relative; z-index:2; max-width:980px; margin:0 auto; padding:36px 20px 80px; }
+
+  /* ===== Hero ===== */
+  .hero{ text-align:center; margin-bottom:40px; }
+  .torches{ display:flex; justify-content:center; align-items:flex-end; gap:60px; margin-bottom:6px; }
+  .torch{ position:relative; width:14px; height:60px; }
+  .torch .stick{ position:absolute; bottom:0; left:5px; width:4px; height:40px; background:#5a3a22; }
+  .torch .flame{
+    position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+    width:16px; height:22px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+    background:radial-gradient(circle at 50% 70%, #fff2b0, var(--ember) 55%, var(--ember-dim) 90%);
+    animation:flicker 1.2s infinite ease-in-out;
+    filter:blur(.2px);
+  }
+  @keyframes flicker{
+    0%,100%{ transform:translateX(-50%) scale(1) rotate(-2deg); opacity:1; }
+    30%{ transform:translateX(-50%) scale(1.08,0.95) rotate(2deg); opacity:.9; }
+    60%{ transform:translateX(-50%) scale(0.94,1.05) rotate(-3deg); opacity:1; }
+  }
+  h1.title{
+    font-family:'Press Start 2P', monospace;
+    font-size:clamp(20px,4.2vw,34px);
+    color:var(--parchment);
+    text-shadow:3px 3px 0 var(--ember-dim), 6px 6px 0 rgba(0,0,0,.35);
+    margin:8px 0 14px;
+    letter-spacing:1px;
+  }
+  .subtitle{ font-family:'VT323', monospace; font-size:22px; color:var(--ice); margin:0 0 18px; }
+  .lore{
+    max-width:680px; margin:0 auto; font-size:19px; line-height:1.6; color:var(--parchment-dark);
+  }
+  .lore b{ color:var(--ember); font-weight:normal; }
+
+  /* ===== Pixel panel frame ===== */
+  .panel{
+    position:relative;
+    background:var(--ink-2);
+    border:3px solid var(--gold);
+    box-shadow:
+      0 0 0 3px var(--ink),
+      0 0 0 6px var(--gold),
+      8px 8px 0 rgba(0,0,0,.4);
+    padding:26px;
+    margin:34px 0;
+  }
+  .panel::before{
+    content:''; position:absolute; top:-6px; left:-6px; width:10px; height:10px; background:var(--ink);
+    box-shadow:
+      calc(100% - 4px) 0 0 var(--ink),
+      0 calc(100% + 12px) 0 var(--ink),
+      calc(100% - 4px) calc(100% + 12px) 0 var(--ink);
+  }
+  .panel h2{
+    font-family:'IM Fell English SC', serif;
+    font-size:28px;
+    color:var(--gold);
+    margin-top:0;
+    border-bottom:2px dashed var(--parchment-line);
+    padding-bottom:10px;
+  }
+
+  /* ===== Scroll display ===== */
+  .scroll-box{
+    background:
+      linear-gradient(var(--parchment), var(--parchment)) padding-box,
+      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(120,90,40,.15) 28px);
+    color:#3a2a12;
+    border:4px double var(--parchment-line);
+    padding:20px;
+    font-family:'VT323', monospace;
+    font-size:20px;
+    line-height:1.5;
+    min-height:90px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    box-shadow: inset 0 0 20px rgba(90,60,20,.3);
+  }
+  .cipher-text{ letter-spacing:1px; }
+  .label{
+    font-family:'Press Start 2P', monospace; font-size:10px; color:var(--ice);
+    margin:0 0 8px; letter-spacing:1px;
+  }
+
+  /* ===== Wax seal button ===== */
+  .seal-wrap{ display:flex; justify-content:center; margin:26px 0; }
+  .seal-btn{
+    position:relative; width:120px; height:120px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #d1554a, var(--blood) 55%, #6e1e1e 100%);
+    border:4px solid #4a1414;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 0 #4a1414, 0 10px 14px rgba(0,0,0,.5);
+    transition:transform .1s ease;
+  }
+  .seal-btn:hover{ filter:brightness(1.08); }
+  .seal-btn:active{ transform:translateY(4px); box-shadow:0 2px 0 #4a1414; }
+  .seal-btn svg{ width:60px; height:60px; image-rendering:pixelated; }
+  .seal-caption{
+    text-align:center; font-family:'Press Start 2P', monospace; font-size:10px; color:var(--parchment-dark);
+    margin-top:10px; letter-spacing:1px;
+  }
+  .shard{
+    position:absolute; width:14px; height:14px; background:var(--blood);
+    opacity:0; pointer-events:none;
+  }
+  .seal-btn.cracked{ animation:crackShake .25s; }
+  @keyframes crackShake{
+    0%{transform:translate(0,0);} 25%{transform:translate(-3px,2px);} 50%{transform:translate(3px,-2px);} 75%{transform:translate(-2px,-2px);} 100%{transform:translate(0,0);}
+  }
+  .seal-btn.broken{ background:radial-gradient(circle at 35% 30%, #3a2a12, #241a0d 70%); border-color:#241a0d; }
+
+  /* result reveal */
+  .reveal-box{
+    margin-top:18px;
+    display:none;
+  }
+  .reveal-box.show{ display:block; }
+  .typewriter{ border-right:2px solid var(--ember); }
+
+  /* ledger table */
+  table.ledger{
+    width:100%; border-collapse:collapse; margin-top:16px; font-family:'VT323', monospace; font-size:18px;
+  }
+  table.ledger th, table.ledger td{
+    text-align:left; padding:6px 10px; border-bottom:1px solid var(--ink-3);
+    color:var(--parchment-dark);
+  }
+  table.ledger th{ color:var(--ice); font-size:15px; text-transform:uppercase; letter-spacing:1px; }
+  table.ledger td.shift-val{ color:var(--ember); }
+
+  /* ===== Scriptorium controls ===== */
+  .row{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .mode-toggle{ display:flex; border:3px solid var(--gold); }
+  .mode-toggle button{
+    font-family:'Press Start 2P', monospace; font-size:11px; padding:12px 18px;
+    background:var(--ink-3); color:var(--parchment-dark); border:none; cursor:pointer;
+  }
+  .mode-toggle button.active{ background:var(--ember); color:var(--ink); }
+  .file-btn, .action-btn, .ghost-btn{
+    font-family:'Press Start 2P', monospace; font-size:11px;
+    padding:12px 16px; cursor:pointer; border:3px solid var(--gold);
+    background:var(--ink-3); color:var(--parchment); box-shadow:3px 3px 0 var(--ink);
+  }
+  .action-btn{ background:var(--ember); color:var(--ink); border-color:var(--ember-dim); }
+  .ghost-btn{ background:transparent; }
+  .file-btn:hover, .action-btn:hover, .ghost-btn:hover{ filter:brightness(1.12); }
+  .file-btn:active, .action-btn:active, .ghost-btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
+  input[type=file]{ display:none; }
+
+  textarea{
+    width:100%; min-height:160px; resize:vertical;
+    background:var(--parchment); color:#3a2a12;
+    border:4px double var(--parchment-line);
+    font-family:'VT323', monospace; font-size:19px; line-height:1.4;
+    padding:14px;
+  }
+  textarea:focus, .nav-btn:focus, button:focus{ outline:3px solid var(--ice); outline-offset:2px; }
+
+  .filename-tag{ font-family:'VT323', monospace; color:var(--ice); font-size:18px; }
+
+  footer{
+    position:relative; z-index:2; text-align:center; padding:24px; font-family:'VT323', monospace;
+    color:var(--wolf); font-size:16px; border-top:2px dashed var(--ink-3);
+  }
+
+  .page{ display:none; }
+  .page.active{ display:block; animation:fadein .25s ease; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  @media (max-width:640px){
+    .brand{ font-size:11px; }
+    .torches{ gap:34px; }
+    .panel{ padding:18px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .torch .flame, .seal-btn.cracked{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="crtBoot"></div>
+<div class="stars" id="starsLayer"></div>
+<div class="vignette"></div>
+<div class="crt"></div>
+<div class="ember-field" id="emberField"></div>
+<div class="bat-field" id="batField"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="review-widget" id="reviewWidget">
+  <button class="review-toggle" id="reviewToggle" aria-expanded="false">✎ REVIEW</button>
+  <div class="review-panel" id="reviewPanel">
+    <p class="label">RATE YOUR JOURNEY</p>
+    <div class="star-rating" id="starRating" role="radiogroup" aria-label="Star rating">
+      <button type="button" class="star" data-value="1" aria-label="1 star">★</button>
+      <button type="button" class="star" data-value="2" aria-label="2 stars">★</button>
+      <button type="button" class="star" data-value="3" aria-label="3 stars">★</button>
+      <button type="button" class="star" data-value="4" aria-label="4 stars">★</button>
+      <button type="button" class="star" data-value="5" aria-label="5 stars">★</button>
+    </div>
+    <textarea id="reviewText" rows="3" placeholder="Tell us of your travels through the Scriptorium..."></textarea>
+    <button class="action-btn" id="submitReviewBtn">SUBMIT REVIEW</button>
+  </div>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-overlay" id="directionsModal">
+  <div class="modal-box">
+    <button class="modal-x" id="directionsXBtn" aria-label="Close">✕</button>
+    <h3 class="modal-title">A MESSAGE ARRIVES</h3>
+    <p class="modal-text">
+      A horde of bats has scattered your torches! Once they settle, seek the
+      <strong>SCRIPTORIUM</strong> above &mdash; there you may encode or decode scrolls
+      of your own: paste text, upload a file, and cast the cipher yourself.
+    </p>
+    <label class="modal-checkbox">
+      <input type="checkbox" id="dontShowAgain">
+      Don't show this message again
+    </label>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="closeDirectionsBtn">GOT IT</button>
+      <button class="action-btn" id="goScriptoriumBtn">TAKE ME THERE</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="thankYouModal">
+  <div class="modal-box">
+    <button class="modal-x" id="thankYouXBtn" aria-label="Close">✕</button>
+    <h3 class="modal-title">THANK YOU!</h3>
+    <p class="modal-text">
+      Your words have been sealed into the raven-post ledger. Safe travels, traveler
+      &mdash; may your scrolls always find their reader.
+    </p>
+    <div class="modal-actions">
+      <button class="action-btn" id="closeThankYouBtn">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="brand">
+    <svg class="sigil" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+      <rect width="12" height="12" fill="none"/>
+      <g fill="#cda54c">
+        <rect x="5" y="1" width="2" height="2"/>
+        <rect x="3" y="3" width="2" height="2"/>
+        <rect x="7" y="3" width="2" height="2"/>
+        <rect x="2" y="5" width="2" height="2"/>
+        <rect x="5" y="5" width="2" height="2"/>
+        <rect x="8" y="5" width="2" height="2"/>
+        <rect x="3" y="7" width="1" height="3"/>
+        <rect x="8" y="7" width="1" height="3"/>
+        <rect x="5" y="7" width="2" height="4"/>
+      </g>
+    </svg>
+    RAVEN &amp; RING
+  </div>
+  <nav id="mainNav">
+    <a href="#home" class="nav-btn" data-page="home">SEALED SCROLL</a>
+    <a href="#scriptorium" class="nav-btn" data-page="scriptorium">SCRIPTORIUM</a>
+    <span class="nav-indicator" id="navIndicator" aria-hidden="true"></span>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ HOME PAGE ============ -->
+  <section id="page-home" class="page">
+    <div class="hero">
+      <div class="torches">
+        <div class="torch"><div class="stick"></div><div class="flame"></div></div>
+        <div class="torch"><div class="stick"></div><div class="flame"></div></div>
+      </div>
+      <h1 class="title">THE SEALED SCROLL</h1>
+      <p class="subtitle">a raven-post between the North and the Shire</p>
+      <p class="lore">
+        Deep in Winterfell's rookery, the wizards of <b>House Stark</b> bind every message with a
+        traveling-spell: each letter of a sentence slides forward through the alphabet by exactly
+        as many places as there are letters in that sentence's <b>first word</b>. Only a reader who
+        knows the trick &mdash; or dares to crack the wax &mdash; may deliver the words safely to
+        <b>Jon Snow</b>, the magical hobbit who keeps the Wall's westernmost gate.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>A Scroll Arrives</h2>
+      <p class="label">CIPHERED TEXT — SEALED IN RED WAX</p>
+      <div class="scroll-box"><div class="cipher-text" id="homeCipherText">…</div></div>
+
+      <div class="seal-wrap">
+        <div>
+          <button class="seal-btn" id="sealBtn" aria-label="Break the wax seal">
+            <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <g fill="#e8c98a">
+                <rect x="7" y="2" width="2" height="2"/>
+                <rect x="5" y="4" width="2" height="2"/>
+                <rect x="9" y="4" width="2" height="2"/>
+                <rect x="3" y="6" width="2" height="2"/>
+                <rect x="7" y="6" width="2" height="2"/>
+                <rect x="11" y="6" width="2" height="2"/>
+                <rect x="4" y="8" width="1" height="4"/>
+                <rect x="11" y="8" width="1" height="4"/>
+                <rect x="7" y="8" width="2" height="5"/>
+              </g>
+            </svg>
+          </button>
+          <p class="seal-caption" id="sealCaption">BREAK THE SEAL</p>
+        </div>
+      </div>
+
+      <div class="reveal-box" id="homeReveal">
+        <p class="label">DECODED MESSAGE</p>
+        <div class="scroll-box"><div id="homeDecoded" class="typewriter"></div></div>
+        <table class="ledger" id="homeLedger">
+          <thead><tr><th>#</th><th>First word</th><th>Letters</th><th>Shift</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p class="lore" style="margin-top:22px;">
+        Need to decode a longer letter, encrypt one of your own, or unseal a whole file of scrolls
+        at once? The scribes of the <a href="#scriptorium" class="nav-inline" style="color:var(--ember); text-decoration:underline;">Scriptorium</a>
+        can help with that.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ SCRIPTORIUM PAGE ============ -->
+  <section id="page-scriptorium" class="page">
+    <div class="hero">
+      <h1 class="title" style="font-size:clamp(18px,3.6vw,28px);">THE SCRIPTORIUM</h1>
+      <p class="subtitle">encode or decode scrolls of any length</p>
+      <p class="lore">
+        Paste a letter, drop in several lines at once, or hand the scribes an entire scroll file.
+        They will find the first word of every sentence, count its letters, and slide each letter
+        of that sentence forward (to seal it) or backward (to unseal it) by that same number.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Prepare the Working</h2>
+
+      <div class="row">
+        <div class="mode-toggle" role="group" aria-label="Choose mode">
+          <button id="modeEncode" class="active">SEAL (ENCODE)</button>
+          <button id="modeDecode">UNSEAL (DECODE)</button>
+        </div>
+      </div>
+
+      <p class="label">INPUT TEXT</p>
+      <textarea id="inputText" placeholder="Write or paste your message here, one or many sentences..."></textarea>
+
+      <div class="row" style="margin-top:14px;">
+        <label class="file-btn" for="fileInput">📜 LOAD A .TXT SCROLL</label>
+        <input type="file" id="fileInput" accept=".txt,text/plain">
+        <span class="filename-tag" id="fileNameTag"></span>
+        <button class="ghost-btn" id="clearBtn">CLEAR</button>
+        <button class="action-btn" id="runBtn">CAST THE CIPHER</button>
+      </div>
+
+      <p class="label" style="margin-top:22px;">RESULT</p>
+      <textarea id="outputText" placeholder="Your sealed or unsealed text will appear here..." readonly></textarea>
+
+      <div class="row" style="margin-top:14px;">
+        <button class="ghost-btn" id="copyBtn">COPY RESULT</button>
+        <button class="ghost-btn" id="downloadBtn">DOWNLOAD .TXT</button>
+      </div>
+
+      <div id="scriptoriumLedgerWrap" style="display:none;">
+        <p class="label" style="margin-top:22px;">SPELL LEDGER — SENTENCE BY SENTENCE</p>
+        <table class="ledger" id="scriptoriumLedger">
+          <thead><tr><th>#</th><th>First word</th><th>Letters</th><th>Shift</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Sent by raven from Winterfell &middot; delivered by hobbit-post to the Wall &middot; the cipher never sleeps.
+</footer>
+
+<script>
+(function(){
+
+  /* ================= CIPHER CORE ================= */
+  function splitSentences(text){
+    if(!text) return [];
+    const matches = text.match(/[^.!?]*[.!?]+|[^.!?]+$/g);
+    return matches || [];
+  }
+  function firstWordLetterCount(sentence){
+    const m = sentence.match(/[A-Za-z]+/);
+    return m ? m[0].length : 0;
+  }
+  function firstWordText(sentence){
+    const m = sentence.match(/[A-Za-z]+/);
+    return m ? m[0] : '(none)';
+  }
+  function shiftChar(ch, shift){
+    const code = ch.charCodeAt(0);
+    if(ch >= 'A' && ch <= 'Z'){
+      return String.fromCharCode(((code - 65 + shift) % 26 + 26) % 26 + 65);
+    }
+    if(ch >= 'a' && ch <= 'z'){
+      return String.fromCharCode(((code - 97 + shift) % 26 + 26) % 26 + 97);
+    }
+    return ch;
+  }
+  function processText(text, mode){
+    const sentences = splitSentences(text);
+    let result = '';
+    const log = [];
+    sentences.forEach(function(s, i){
+      const n = firstWordLetterCount(s);
+      const shift = mode === 'encode' ? n : -n;
+      let out = '';
+      for(const ch of s){ out += shiftChar(ch, shift); }
+      result += out;
+      log.push({
+        index: i+1,
+        firstWord: firstWordText(s),
+        letters: n,
+        shift: shift
+      });
+    });
+    return { result: result, log: log };
+  }
+
+  function fillLedger(tbodyEl, log){
+    tbodyEl.innerHTML = '';
+    log.forEach(function(row){
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+row.index+'</td><td>'+escapeHtml(row.firstWord)+'</td>'+
+                      '<td>'+row.letters+'</td><td class="shift-val">'+(row.shift>=0?'+':'')+row.shift+'</td>';
+      tbodyEl.appendChild(tr);
+    });
+  }
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ================= NAVIGATION ================= */
+  const pages = { home: document.getElementById('page-home'), scriptorium: document.getElementById('page-scriptorium') };
+  const navBtns = document.querySelectorAll('.nav-btn');
+
+  function showPage(name){
+    if(!pages[name]) name = 'home';
+    Object.keys(pages).forEach(function(k){
+      pages[k].classList.toggle('active', k === name);
+    });
+    navBtns.forEach(function(b){
+      b.classList.toggle('active', b.dataset.page === name);
+    });
+  }
+  window.addEventListener('hashchange', function(){
+    const name = location.hash.replace('#','') || 'home';
+    showPage(name);
+  });
+  showPage(location.hash.replace('#','') || 'home');
+
+  /* ================= HOME PAGE DEMO ================= */
+  const DEMO_PLAINTEXT = "Winter comes swiftly beyond the Wall. Hold the beacon fires high, small friend of the Shire. Bilbo rides north before the first snow falls. Trust no raven that flies without a Stark seal.";
+  const demoEncoded = processText(DEMO_PLAINTEXT, 'encode');
+  document.getElementById('homeCipherText').textContent = demoEncoded.result;
+
+  const sealBtn = document.getElementById('sealBtn');
+  const sealCaption = document.getElementById('sealCaption');
+  const homeReveal = document.getElementById('homeReveal');
+  const homeDecoded = document.getElementById('homeDecoded');
+  const homeLedgerBody = document.querySelector('#homeLedger tbody');
+  let sealBroken = false;
+
+  sealBtn.addEventListener('click', function(){
+    if(sealBroken) return;
+    sealBroken = true;
+    sealBtn.classList.add('cracked');
+    setTimeout(function(){ sealBtn.classList.add('broken'); }, 200);
+    sealCaption.textContent = 'SEAL BROKEN';
+
+    const decoded = processText(demoEncoded.result, 'decode');
+    fillLedger(homeLedgerBody, decoded.log);
+    homeReveal.classList.add('show');
+
+    typewrite(homeDecoded, decoded.result, 18);
+  });
+
+  function typewrite(el, text, speed){
+    el.textContent = '';
+    let i = 0;
+    (function step(){
+      if(i <= text.length){
+        el.textContent = text.slice(0, i);
+        i++;
+        setTimeout(step, speed);
+      } else {
+        el.classList.remove('typewriter');
+      }
+    })();
+  }
+
+  /* ================= SCRIPTORIUM PAGE ================= */
+  let currentMode = 'encode';
+  const modeEncodeBtn = document.getElementById('modeEncode');
+  const modeDecodeBtn = document.getElementById('modeDecode');
+  const inputText = document.getElementById('inputText');
+  const outputText = document.getElementById('outputText');
+  const runBtn = document.getElementById('runBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const fileInput = document.getElementById('fileInput');
+  const fileNameTag = document.getElementById('fileNameTag');
+  const ledgerWrap = document.getElementById('scriptoriumLedgerWrap');
+  const scriptoriumLedgerBody = document.querySelector('#scriptoriumLedger tbody');
+
+  modeEncodeBtn.addEventListener('click', function(){
+    currentMode = 'encode';
+    modeEncodeBtn.classList.add('active');
+    modeDecodeBtn.classList.remove('active');
+  });
+  modeDecodeBtn.addEventListener('click', function(){
+    currentMode = 'decode';
+    modeDecodeBtn.classList.add('active');
+    modeEncodeBtn.classList.remove('active');
+  });
+
+  runBtn.addEventListener('click', function(){
+    const { result, log } = processText(inputText.value, currentMode);
+    outputText.value = result;
+    if(log.length){
+      fillLedger(scriptoriumLedgerBody, log);
+      ledgerWrap.style.display = 'block';
+    } else {
+      ledgerWrap.style.display = 'none';
+    }
+  });
+
+  clearBtn.addEventListener('click', function(){
+    inputText.value = '';
+    outputText.value = '';
+    fileNameTag.textContent = '';
+    ledgerWrap.style.display = 'none';
+  });
+
+  copyBtn.addEventListener('click', function(){
+    if(!outputText.value) return;
+    navigator.clipboard.writeText(outputText.value).then(function(){
+      const old = copyBtn.textContent;
+      copyBtn.textContent = 'COPIED!';
+      setTimeout(function(){ copyBtn.textContent = old; }, 1200);
+    });
+  });
+
+  downloadBtn.addEventListener('click', function(){
+    if(!outputText.value) return;
+    const blob = new Blob([outputText.value], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (currentMode === 'encode' ? 'sealed-scroll' : 'unsealed-scroll') + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  fileInput.addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    fileNameTag.textContent = '📄 ' + file.name;
+    const reader = new FileReader();
+    reader.onload = function(evt){
+      inputText.value = evt.target.result;
+    };
+    reader.readAsText(file);
+  });
+
+})();
+</script>
+<script src="script.js"></script>
+
+</body>
+</html>
